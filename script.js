@@ -1,16 +1,5 @@
 class LotterySystem {
     constructor() {
-        try {
-            this.classData = {
-                '1A': 31, '1B': 32, '1C': 32, '1D': 33,
-                '2A': 28, '2B': 32, '2C': 27, '2D': 27,
-                '3A': 27, '3B': 29, '3C': 26, '3D': 26,
-                '4A': 28, '4B': 26, '4C': 19, '4D': 18,
-                '5A': 28, '5B': 27, '5C': 24, '5D': 18,
-                '6A': 26, '6B': 32, '6C': 16, '6D': 16
-            };
-            
-            this.winners = new Set();
         this.classData = {
             '1A': 31, '1B': 32, '1C': 32, '1D': 33,
             '2A': 28, '2B': 32, '2C': 27, '2D': 27,
@@ -25,18 +14,13 @@ class LotterySystem {
         this.currentGrade = null;
         this.selectedClass = null;
         this.winnerStages = new Map();
+        this.isMusicPlaying = false;
         
         this.initializeUI();
         this.bindEvents();
         this.loadFromLocalStorage();
         this.initializeReplacementMode();
-        
-        this.isMusicPlaying = false;
         this.initializeMusic();
-        } catch (error) {
-            console.error('初始化錯誤:', error);
-            alert('系統初始化失敗，請刷新頁面重試');
-        }
     }
 
     initializeUI() {
@@ -74,6 +58,7 @@ class LotterySystem {
         // 階段選擇事件
         this.stageSelect.addEventListener('change', () => {
             const stage = parseInt(this.stageSelect.value);
+            this.currentStage = stage;
             this.switchDrawInterface(stage);
         });
 
@@ -82,20 +67,24 @@ class LotterySystem {
             this.currentGrade = parseInt(this.gradeSelect.value);
             if (this.currentGrade) {
                 this.updateClassLabels();
-                this.enableDrawButtons();
+                if (this.currentStage === 1 || this.currentStage === 4) {
+                    this.multiDrawBtn.disabled = false;
+                } else {
+                    this.drawClassBtn.disabled = false;
+                }
             }
         });
 
         // 添加抽獎按鈕事件
-        document.getElementById('multiDrawBtn').addEventListener('click', () => {
+        this.multiDrawBtn.addEventListener('click', () => {
             this.startMultiClassDraw();
         });
 
-        document.getElementById('drawClassBtn').addEventListener('click', () => {
+        this.drawClassBtn.addEventListener('click', () => {
             this.startClassDraw();
         });
 
-        document.getElementById('drawNumberBtn').addEventListener('click', () => {
+        this.drawNumberBtn.addEventListener('click', () => {
             this.startNumberDraw();
         });
 
@@ -173,6 +162,11 @@ class LotterySystem {
         if (!this.currentGrade) {
             alert('請先選擇年級');
             return;
+        }
+
+        // 播放音樂
+        if (!this.isMusicPlaying) {
+            this.toggleMusic();
         }
 
         const classDisplay = document.querySelector('.class-display');
@@ -511,28 +505,6 @@ class LotterySystem {
             this.musicBtn.classList.add('playing');
         }
         this.isMusicPlaying = !this.isMusicPlaying;
-    }
-
-    // 在開始抽獎時自動播放音樂
-    async startMultiClassDraw() {
-        if (!this.isMusicPlaying) {
-            this.toggleMusic();
-        }
-        // ... 現有的抽獎代碼 ...
-    }
-
-    async startClassDraw() {
-        if (!this.isMusicPlaying) {
-            this.toggleMusic();
-        }
-        // ... 現有的抽獎代碼 ...
-    }
-
-    async startReplacementDraw() {
-        if (!this.isMusicPlaying) {
-            this.toggleMusic();
-        }
-        // ... 現有的抽獎代碼 ...
     }
 
     enableDrawButtons() {
