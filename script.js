@@ -534,6 +534,19 @@ class LotterySystem {
         }
         // ... 現有的抽獎代碼 ...
     }
+
+    enableDrawButtons() {
+        if (this.currentGrade) {
+            // 根據當前階段啟用相應的按鈕
+            if (this.currentStage === 1 || this.currentStage === 4) {
+                // 多班級同時抽獎模式
+                this.multiDrawBtn.disabled = false;
+            } else {
+                // 兩步驟抽獎模式
+                this.drawClassBtn.disabled = false;
+            }
+        }
+    }
 }
 
 // 初始化系統
