@@ -5,173 +5,134 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聖誕節幸運抽獎</title>
     <link rel="stylesheet" href="./styles.css">
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="snowfall"></div>
     
-    <div class="container">
-        <div class="music-control">
-            <button id="musicToggleBtn" class="music-btn">
-                <span class="music-icon">🔇</span>
+    <!-- 拍照模式背景 (預設隱藏) -->
+    <div id="photoBackdrop" class="photo-backdrop" style="display: none;">
+        <img src="./backdrop.png" alt="Backdrop">
+    </div>
+
+    <!-- 學校吉祥物 -->
+    <img src="./05.png" alt="School Mascot Girl" class="school-mascot mascot-left">
+    <img src="./10.png" alt="School Mascot Boy" class="school-mascot mascot-right">
+
+    <div class="container-fluid">
+        <div class="top-controls">
+            <!-- 手動匯入按鈕 (作為自動讀取失敗的備案) -->
+            <label for="manualFileInput" class="control-icon-btn" title="匯入名單">
+                <span class="icon">📂</span>
+            </label>
+            <input type="file" id="manualFileInput" accept=".xlsx, .xls, .csv" style="display: none;" />
+
+            <button id="photoModeBtn" class="control-icon-btn" title="拍照模式">
+                <span class="icon">📷</span>
+            </button>
+            <button id="musicToggleBtn" class="control-icon-btn" title="音樂開關">
+                <span class="music-icon icon">🔇</span>
             </button>
         </div>
         
-        <h1>🎄 聖誕節幸運抽獎 🎄</h1>
+        <h1>天主教伍華中學 家長教師會 聖誕抽獎</h1>
         
-        <div class="control-panel">
-            <!-- 階段選擇 -->
-            <div class="stage-selector">
-                <select id="stageSelect">
-                    <option value="1">第一階段：三獎</option>
-                    <option value="2">第二階段：二獎</option>
-                    <option value="3">第三階段：大獎</option>
-                    <option value="4">第四階段：特別大獎1</option>
-                    <option value="5">第五階段：特別大獎2</option>
-                </select>
-            </div>
+        <div class="main-content">
+            <!-- 左側：控制與抽獎 (40%) -->
+            <div class="left-panel">
+                <div class="control-panel">
+                    <!-- 階段選擇 -->
+                    <div class="stage-selector">
+                        <select id="stageSelect">
+                            <option value="2">二獎：麥當勞現金券</option>
+                            <option value="3">大獎：馬拉松現金券</option>
+                        </select>
+                    </div>
 
-            <!-- 年級選擇 -->
-            <div class="grade-selector">
-                <select id="gradeSelect">
-                    <option value="">選擇年級</option>
-                    <option value="1">中一級</option>
-                    <option value="2">中二級</option>
-                    <option value="3">中三級</option>
-                    <option value="4">中四級</option>
-                    <option value="5">中五級</option>
-                    <option value="6">中六級</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- 多班級同時抽獎界面（第一、四階段） -->
-        <div id="multiClassDraw" class="draw-interface">
-            <div class="stage-info">
-                <h3>四班同時抽獎</h3>
-                <p>選擇年級後，點擊開始抽獎按鈕，系統將同時為四個班級抽出得獎者</p>
-            </div>
-            <div class="multi-class-container">
-                <div class="class-wheels">
-                    <div class="wheel-container" data-class="A">
-                        <div class="class-label">A班</div>
-                        <div class="number-display">00</div>
-                    </div>
-                    <div class="wheel-container" data-class="B">
-                        <div class="class-label">B班</div>
-                        <div class="number-display">00</div>
-                    </div>
-                    <div class="wheel-container" data-class="C">
-                        <div class="class-label">C班</div>
-                        <div class="number-display">00</div>
-                    </div>
-                    <div class="wheel-container" data-class="D">
-                        <div class="class-label">D班</div>
-                        <div class="number-display">00</div>
+                    <!-- 年級選擇 -->
+                    <div class="grade-selector">
+                        <select id="gradeSelect">
+                            <option value="">選擇年級</option>
+                            <option value="1">中一級</option>
+                            <option value="2">中二級</option>
+                            <option value="3">中三級</option>
+                            <option value="4">中四級</option>
+                            <option value="5">中五級</option>
+                            <option value="6">中六級</option>
+                        </select>
                     </div>
                 </div>
-                <button id="multiDrawBtn" class="primary-btn">開始抽獎</button>
-            </div>
-        </div>
 
-        <!-- 兩步驟抽獎界面（第二、三、五階段） -->
-        <div id="twoStepDraw" class="draw-interface" style="display: none;">
-            <div class="stage-info">
-                <h3>分步抽獎</h3>
-                <p>第一步：抽選班別 → 第二步：抽選學號</p>
-            </div>
-            <div class="two-step-container">
-                <div class="step-box class-selection">
-                    <h4>第一步：班別抽選</h4>
-                    <div class="result-display">
-                        <div class="label">班別</div>
-                        <div class="class-display">-</div>
+                <!-- 抽獎區 -->
+                <div id="drawArea" class="draw-interface">
+                    <div class="stage-info">
+                        <h3 id="currentPrizeTitle">請選擇獎項</h3>
+                        <p id="currentPrizeDesc">...</p>
                     </div>
-                    <button id="drawClassBtn" class="primary-btn">抽選班別</button>
-                </div>
-                <div class="step-box number-selection" style="display: none;">
-                    <h4>第二步：學號抽選</h4>
-                    <div class="result-display">
-                        <div class="label">學號</div>
-                        <div class="number-display">--</div>
+                    
+                    <!-- 動態抽獎顯示區 (1個或2個視窗) -->
+                    <div id="slotsContainer" class="slots-container">
+                        <!-- Slots will be injected here by JS -->
                     </div>
-                    <button id="drawNumberBtn" class="primary-btn">抽選學號</button>
-                </div>
-            </div>
-        </div>
 
-        <!-- 操作按鈕 -->
-        <div class="action-buttons">
-            <button id="drawBtn" class="primary-btn">開始抽獎</button>
-            <button id="replacementModeBtn" class="secondary-btn">補抽模式</button>
-            <button id="resetBtn" class="danger-btn">重置系統</button>
-        </div>
-
-        <!-- 補抽模式界面 -->
-        <div id="replacementDrawPanel" class="replacement-panel" style="display: none;">
-            <div class="stage-info">
-                <h3>補抽模式</h3>
-                <p>請依序選擇：獎項 → 年級 → 抽獎方式</p>
-            </div>
-            
-            <div class="replacement-steps">
-                <!-- 步驟1：選擇獎項 -->
-                <div class="step-box">
-                    <h4>步驟1：選擇獎項</h4>
-                    <select id="replacementStageSelect">
-                        <option value="">請選擇獎項</option>
-                        <option value="1">三獎</option>
-                        <option value="2">二獎</option>
-                        <option value="3">大獎</option>
-                        <option value="4">60周年特別大獎1</option>
-                        <option value="5">60周年特別大獎2</option>
-                    </select>
+                    <button id="drawBtn" class="primary-btn" disabled>開始抽獎</button>
                 </div>
 
-                <!-- 步驟2：選擇年級 -->
-                <div class="step-box">
-                    <h4>步驟2：選擇年級</h4>
-                    <select id="replacementGradeSelect">
-                        <option value="">請選擇年級</option>
-                        <option value="1">中一級</option>
-                        <option value="2">中二級</option>
-                        <option value="3">中三級</option>
-                        <option value="4">中四級</option>
-                        <option value="5">中五級</option>
-                        <option value="6">中六級</option>
-                    </select>
+                <!-- 操作按鈕 -->
+                <div class="action-buttons">
+                    <button id="replacementModeBtn" class="secondary-btn">補抽模式</button>
+                    <button id="resetBtn" class="danger-btn">重置系統</button>
                 </div>
 
-                <!-- 步驟3：選擇抽獎方式 -->
-                <div class="step-box">
-                    <h4>步驟3：選擇抽獎方式</h4>
-                    <div class="draw-method-selector">
-                        <button id="autoClassBtn" class="method-btn">系統抽取班別</button>
-                        <button id="manualClassBtn" class="method-btn">自選班別</button>
+                <!-- 補抽模式 Modal -->
+                <div id="replacementOverlay" class="replacement-overlay" style="display: none;">
+                    <div class="replacement-modal">
+                        <div class="replacement-header">
+                            <h3>補抽模式</h3>
+                            <button id="closeReplacementBtn" class="close-modal-btn">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>獎項</label>
+                                <select id="replacementStageSelect">
+                                    <option value="">請選擇</option>
+                                    <option value="2">二獎</option>
+                                    <option value="3">大獎</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>年級</label>
+                                <select id="replacementGradeSelect">
+                                    <option value="">請選擇</option>
+                                    <option value="1">中一級</option>
+                                    <option value="2">中二級</option>
+                                    <option value="3">中三級</option>
+                                    <option value="4">中四級</option>
+                                    <option value="5">中五級</option>
+                                    <option value="6">中六級</option>
+                                </select>
+                            </div>
+                            
+                            <div class="replacement-result-area">
+                                <div class="result-row">班別：<span id="replacementClass">-</span></div>
+                                <div class="result-row">學號：<span id="replacementNumber">--</span></div>
+                                <div class="result-row result-name"><span id="replacementName"></span></div>
+                            </div>
+                            
+                            <button id="startReplacementBtn" class="primary-btn">抽取幸運兒</button>
+                        </div>
                     </div>
-                    <select id="replacementClassSelect" style="display: none;">
-                        <option value="">請選擇班別</option>
-                        <option value="A">A班</option>
-                        <option value="B">B班</option>
-                        <option value="C">C班</option>
-                        <option value="D">D班</option>
-                    </select>
                 </div>
             </div>
 
-            <!-- 補抽結果顯示 -->
-            <div class="replacement-result">
-                <div class="result-display">
-                    <div class="class-info">班別：<span id="replacementClass">-</span></div>
-                    <div class="number-info">學號：<span id="replacementNumber">--</span></div>
+            <!-- 右側：中獎名單 (60%) -->
+            <div class="right-panel">
+                <div class="winner-list">
+                    <h2>中獎名單</h2>
+                    <div id="winners"></div>
                 </div>
-                <button id="startReplacementBtn" class="primary-btn">開始補抽</button>
             </div>
-        </div>
-
-        <!-- 中獎名單 -->
-        <div class="winner-list">
-            <h2>中獎名單</h2>
-            <div id="winners"></div>
         </div>
 
         <audio id="bgMusic" loop>
