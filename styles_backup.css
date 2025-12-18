@@ -1,0 +1,106 @@
+/* Backup Mode Specifics */
+.backup-modal-fullscreen {
+    width: 98vw;
+    height: 95vh;
+    max-width: none !important; /* Override default */
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background: #1a3320; /* Darker green background */
+}
+
+.backup-modal-fullscreen .modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    gap: 15px;
+}
+
+.backup-results-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two columns */
+    grid-auto-rows: min-content;
+    column-gap: 40px; /* Space between columns */
+    row-gap: 20px;
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+}
+
+.backup-placeholder {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #888;
+    font-size: 2em;
+    padding: 50px;
+}
+
+.backup-grade-group {
+    background: rgba(255,255,255,0.05);
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    height: fit-content;
+}
+
+.backup-grade-title {
+    color: var(--primary-color);
+    font-size: 2em; /* Larger title */
+    border-bottom: 2px solid var(--primary-color);
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.backup-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Left align items */
+    gap: 15px; /* Close spacing */
+    padding: 5px 0;
+    line-height: 1.2;
+}
+
+/* 3x Font Size Scaling */
+.backup-type {
+    font-size: 1.5rem; /* ~24px */
+    background: var(--accent-color);
+    color: black;
+    padding: 2px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    min-width: fit-content;
+}
+
+.backup-info {
+    color: white;
+    font-weight: bold;
+    font-size: 2.5rem; /* ~40px */
+    white-space: nowrap;
+}
+
+.backup-name {
+    color: var(--highlight-color);
+    font-size: 2.5rem; /* ~40px */
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.backup-controls {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    padding-top: 10px;
+}
+
+.backup-controls button {
+    font-size: 1.5em;
+    padding: 15px 30px;
+}
+

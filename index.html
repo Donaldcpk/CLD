@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聖誕節幸運抽獎</title>
     <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./styles_backup.css">
     <!-- SheetJS for Excel parsing -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
     <div class="snowfall"></div>
@@ -30,6 +34,9 @@
 
             <button id="photoModeBtn" class="control-icon-btn" title="拍照模式">
                 <span class="icon">📷</span>
+            </button>
+            <button id="backupModeBtn" class="control-icon-btn" title="後備模式">
+                <span class="icon">🎁</span>
             </button>
             <button id="musicToggleBtn" class="control-icon-btn" title="音樂開關">
                 <span class="music-icon icon">🔇</span>
@@ -121,6 +128,27 @@
                             </div>
                             
                             <button id="startReplacementBtn" class="primary-btn">抽取幸運兒</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 後備模式 Modal -->
+                <div id="backupOverlay" class="replacement-overlay" style="display: none;">
+                    <div id="backupModal" class="replacement-modal backup-modal-fullscreen">
+                        <div class="replacement-header">
+                            <h3>🎁 後備名單抽獎 (Reserve)</h3>
+                            <button id="closeBackupBtn" class="close-modal-btn">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="backupResults" class="backup-results-container">
+                                <!-- Results injected here -->
+                                <div class="backup-placeholder">請選擇下方按鈕開始抽獎</div>
+                            </div>
+                            
+                            <div class="backup-controls">
+                                <button id="startBackupSecondBtn" class="primary-btn" style="background-color: var(--accent-color);">1. 抽選二獎後備 (12名)</button>
+                                <button id="startBackupGrandBtn" class="primary-btn">2. 抽選大獎後備 (6名)</button>
+                            </div>
                         </div>
                     </div>
                 </div>

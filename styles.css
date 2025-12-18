@@ -78,13 +78,14 @@ h1 {
 
 .control-panel select {
     width: 100%;
-    padding: 12px;
-    font-size: 1.1em;
+    padding: 15px; /* Increased padding */
+    font-size: 1.5em; /* Increased font size */
     border-radius: var(--border-radius);
     border: 1px solid rgba(255,255,255,0.3);
     background: var(--secondary-color);
     color: white;
     cursor: pointer;
+    font-weight: bold;
 }
 
 /* File Upload - HIDDEN */
@@ -185,11 +186,13 @@ h1 {
     transform: none;
 }
 
-.primary-btn:not(:disabled):hover,
-.secondary-btn:hover,
-.danger-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+#drawBtn {
+    max-width: 300px;
+    margin: 20px auto 0 auto;
+    font-size: 1.5em;
+    padding: 15px 40px;
+    width: auto;
+    flex: none; /* Prevent flex stretching */
 }
 
 /* Winner List - Right Panel */
@@ -435,6 +438,8 @@ h1 {
     max-height: 100%;
     object-fit: contain;
 }
+
+/* REMOVED: Backup Mode Styles moved to styles_backup.css */
 
 /* Responsive */
 @media (max-width: 1024px) {

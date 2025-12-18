@@ -19,8 +19,17 @@ class LotterySystem {
         
         this.initializeUI();
         this.bindEvents();
-        this.loadFromLocalStorage(); // Load Winners & Student Map
+        
+        // Firebase / LocalStorage Init
+        this.initializeFirebase(); // Try to init Firebase first
+        
+        // If Firebase not configured, load from LocalStorage
+        if (!this.db) {
+        this.loadFromLocalStorage();
+        }
+
         this.initializeReplacementMode();
+        this.initializeBackupMode(); // New Backup Mode
         this.initializeMusic();
         this.initializePhotoMode();
         
@@ -29,6 +38,52 @@ class LotterySystem {
         
         // Initial setup
         this.updateStageInfo();
+    }
+
+    initializeFirebase() {
+        // --- 設定開始 ---
+        // 請將您的 Firebase 設定填寫於此處
+        // 若 apiKey 為空字串，系統將自動切換回單機模式 (LocalStorage)
+        const firebaseConfig = {
+            apiKey: "", 
+            authDomain: "",
+            databaseURL: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
+        };
+        // --- 設定結束 ---
+
+        if (!firebaseConfig.apiKey) {
+            console.log("Firebase未設定，使用本機模式");
+            return;
+        }
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            this.db = firebase.database();
+            console.log("Firebase Connected");
+            
+            // Listen for changes
+            this.db.ref('winners').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Update local state from cloud
+                    this.winners = new Set(data.list || []);
+                    this.winnerStages = new Map(Object.entries(data.stages || {}));
+                    
+                    // Refresh UI
+                    this.winnersDisplay.innerHTML = '';
+                    Array.from(this.winners).forEach(w => {
+                         const stage = this.winnerStages.get(w);
+                         this.updateWinnersList(w, stage);
+                    });
+                }
+            });
+        } catch (e) {
+            console.error("Firebase init failed", e);
+        }
     }
 
     initializeUI() {
@@ -68,7 +123,7 @@ class LotterySystem {
         this.drawBtn.addEventListener('click', () => {
             if (this.currentStage === 2) {
                 this.startDoubleDraw();
-            } else {
+                } else {
                 this.startSingleDraw();
             }
         });
@@ -130,7 +185,7 @@ class LotterySystem {
         this.drawBtn.disabled = true;
         this.ensureMusicPlaying();
 
-        // 1. Get 2 winners from the pool
+        // 1. Get pool
         const pool = this.getGradePool(this.currentGrade);
         if (pool.length < 2) {
             this.showToast(`該年級剩餘人數不足 (${pool.length}人)`);
@@ -138,9 +193,24 @@ class LotterySystem {
             return;
         }
 
-        // Shuffle and pick 2
         this.shuffleArray(pool);
-        const winners = [pool[0], pool[1]];
+        
+        // 2. Pick Winner 1
+        const winner1 = pool[0];
+        const class1 = winner1.split('-')[0]; // e.g. "1A"
+
+        // 3. Find Winner 2 (Must be different class)
+        // Filter pool to find students from different classes
+        const pool2 = pool.filter(w => w.split('-')[0] !== class1);
+
+        if (pool2.length === 0) {
+            alert(`無法抽出兩位不同班別的學生！\n(剩餘學生皆來自 ${class1} 班)`);
+            this.drawBtn.disabled = false;
+            return;
+        }
+
+        const winner2 = pool2[Math.floor(Math.random() * pool2.length)];
+        const winners = [winner1, winner2];
 
         // 2. Animate Slots
         const slot1 = document.getElementById('slot1');
@@ -178,7 +248,7 @@ class LotterySystem {
         await this.animateSlot(slot1, winner);
 
         // 3. Record
-        this.recordWinner(winner);
+                this.recordWinner(winner);
         this.drawBtn.disabled = false;
     }
 
@@ -244,7 +314,7 @@ class LotterySystem {
         label.textContent = '...';
         
         // Animation
-        const duration = 3000; // Slightly longer
+        const duration = 2000; // Reduced by 1 second (3000 -> 2000)
         const interval = 50;
         const steps = duration / interval;
         
@@ -289,8 +359,18 @@ class LotterySystem {
     recordWinner(winner, stage = this.currentStage) {
         this.winners.add(winner);
         this.winnerStages.set(winner, stage);
+        
+        // Update UI locally first
         this.updateWinnersList(winner, stage);
         this.saveToLocalStorage();
+        
+        // Sync to Cloud if enabled
+        if (this.db) {
+            this.db.ref('winners').set({
+                list: Array.from(this.winners),
+                stages: Object.fromEntries(this.winnerStages)
+            });
+        }
     }
 
     createWinnerElement(winner, stage) {
@@ -322,7 +402,16 @@ class LotterySystem {
             this.winners.delete(winner);
             this.winnerStages.delete(winner);
             this.saveToLocalStorage();
-            this.loadFromLocalStorage(); // Refresh list
+            
+            // Sync delete to Cloud
+            if (this.db) {
+                this.db.ref('winners').set({
+                    list: Array.from(this.winners),
+                    stages: Object.fromEntries(this.winnerStages)
+                });
+            } else {
+                this.loadFromLocalStorage(); // Refresh list locally
+            }
         }
     }
 
@@ -385,6 +474,12 @@ class LotterySystem {
             // Do NOT remove studentMap, keep the loaded file
             // localStorage.removeItem('studentMap'); 
             this.saveToLocalStorage();
+            
+            // Clear Cloud
+            if (this.db) {
+                this.db.ref('winners').remove();
+            }
+            
             this.winnersDisplay.innerHTML = '';
             location.reload();
         }
@@ -566,7 +661,7 @@ class LotterySystem {
             rName.textContent = ''; 
             
             // Animate
-            const duration = 2000; 
+            const duration = 1000; 
             const interval = 50;
             const steps = duration / interval;
             
@@ -592,6 +687,155 @@ class LotterySystem {
             this.recordWinner(winner, stage);
             
             startBtn.disabled = false;
+        });
+    }
+    // --- Backup Mode ---
+    initializeBackupMode() {
+        const overlay = document.getElementById('backupOverlay');
+        const openBtn = document.getElementById('backupModeBtn');
+        const closeBtn = document.getElementById('closeBackupBtn');
+        const secondBtn = document.getElementById('startBackupSecondBtn');
+        const grandBtn = document.getElementById('startBackupGrandBtn');
+        const resultsContainer = document.getElementById('backupResults');
+
+        openBtn.addEventListener('click', () => {
+            overlay.style.display = 'flex';
+        });
+
+        closeBtn.addEventListener('click', () => {
+            overlay.style.display = 'none';
+        });
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.style.display = 'none';
+        });
+
+        // Track picked backups to avoid duplicate within session
+        // Note: This resets on refresh. If persistence needed for backups, need localStorage.
+        // User asked for "Record" not necessarily persistence.
+        this.backupPickedIDs = new Set(); 
+
+        secondBtn.addEventListener('click', async () => {
+            if (!confirm('確定要抽選所有 12 位【二獎】後備名單嗎？')) return;
+            await this.runBackupDraw(2, '二獎');
+        });
+
+        grandBtn.addEventListener('click', async () => {
+            if (!confirm('確定要抽選所有 6 位【大獎】後備名單嗎？')) return;
+            await this.runBackupDraw(3, '大獎');
+        });
+    }
+
+    async runBackupDraw(stage, prizeName) {
+        const resultsContainer = document.getElementById('backupResults');
+        // Clear container if starting new batch? Or append?
+        // Let's clear to avoid confusion, or maybe sections.
+        // User said "Split into two steps".
+        
+        // Let's calculate winners first
+        const batchResults = [];
+        
+        for (let g = 1; g <= 6; g++) {
+            // Filter pool: exclude winners AND previously picked backups
+            let pool = this.getGradePool(g).filter(id => !this.backupPickedIDs.has(id));
+            this.shuffleArray(pool);
+
+            const countNeeded = (stage === 2) ? 2 : 1; // 2 for Second, 1 for Grand
+            
+            if (pool.length < countNeeded) {
+                batchResults.push({ grade: g, type: 'error', msg: `人數不足` });
+                continue;
+            }
+
+            if (stage === 2) {
+                // Pick 2 (Diff Class Logic)
+                let w1 = pool[0];
+                let w2 = null;
+                const c1 = w1.split('-')[0];
+                const diffClassPool = pool.filter(id => id !== w1 && id.split('-')[0] !== c1);
+                
+                if (diffClassPool.length > 0) w2 = diffClassPool[0];
+                else w2 = pool[1];
+
+                this.backupPickedIDs.add(w1);
+                this.backupPickedIDs.add(w2);
+                batchResults.push({ grade: g, type: 'winner', prize: prizeName, id: w1 });
+                batchResults.push({ grade: g, type: 'winner', prize: prizeName, id: w2 });
+            } else {
+                // Grand Prize
+                let w1 = pool[0];
+                this.backupPickedIDs.add(w1);
+                batchResults.push({ grade: g, type: 'winner', prize: prizeName, id: w1 });
+            }
+        }
+
+        // Render Placeholders & Animate
+        await this.animateBackupResults(batchResults);
+    }
+
+    async animateBackupResults(results) {
+        const container = document.getElementById('backupResults');
+        container.innerHTML = ''; // Clear previous
+
+        // 1. Render initial structure with placeholders
+        // We group by grade for display
+        const rowElements = [];
+
+        // Sort results by grade
+        results.sort((a, b) => a.grade - b.grade);
+
+        // Group by grade
+        for (let g = 1; g <= 6; g++) {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'backup-grade-group';
+            groupDiv.innerHTML = `<div class="backup-grade-title">中${g}級</div>`;
+            
+            const gradeItems = results.filter(r => r.grade === g);
+            
+            gradeItems.forEach(item => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'backup-row';
+                if (item.type === 'error') {
+                    rowDiv.innerHTML = `<span style="color:red">${item.msg}</span>`;
+                } else {
+                    // Placeholder ID
+                    rowDiv.dataset.finalId = item.id;
+                    rowDiv.innerHTML = `
+                        <span class="backup-type">[${item.prize}]</span>
+                        <span class="backup-info" id="b-info-${item.id}">...</span>
+                        <span class="backup-name" id="b-name-${item.id}"></span>
+                    `;
+                    rowElements.push({
+                        elInfo: rowDiv.querySelector('.backup-info'),
+                        elName: rowDiv.querySelector('.backup-name'),
+                        finalId: item.id
+                    });
+                }
+                groupDiv.appendChild(rowDiv);
+            });
+            container.appendChild(groupDiv);
+        }
+
+        // 2. Animate rolling
+        const duration = 2000; // 2 seconds (Reduced from implicit longer time)
+        const interval = 50;
+        const steps = duration / interval;
+
+        for (let i = 0; i < steps; i++) {
+            rowElements.forEach(row => {
+                const randomVal = this.getRandomStudentId();
+                const [c, n] = randomVal.split('-');
+                row.elInfo.textContent = `${c}班 - ${n}號`;
+            });
+            await new Promise(r => setTimeout(r, interval));
+        }
+
+        // 3. Reveal
+        rowElements.forEach(row => {
+            const [c, n] = row.finalId.split('-');
+            const name = this.getStudentName(row.finalId);
+            row.elInfo.textContent = `${c}班 - ${n}號`;
+            row.elName.textContent = name;
         });
     }
 }
